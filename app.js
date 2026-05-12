@@ -11,6 +11,8 @@ const MongoStore = require("connect-mongo").default;
 
 const app = express();
 
+app.set("view engine", "ejs");
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 
@@ -39,38 +41,32 @@ async function connectDB() {
 
 connectDB();
 
-app.get("/", (req, res) => {
+function requireLogin(req, res, next) {
   if (!req.session.user) {
-    res.send(`
-            <h1>Home</h1>
-            <a href="/signup">Signup</a>
-            <br>
-            <a href="/login">Login</a>
-        `);
-  } else {
-    res.send(`
-            <h1>Hello ${req.session.user.name}</h1>
-            <a href="/members">Members</a>
-            <br>
-            <a href="/logout">Logout</a>
-        `);
+    return res.redirect("/login");
   }
+
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (req.session.user.user_type !== "admin") {
+    return res.status(403).render("error", {
+      message: "You are not authorized to view this page.",
+    });
+  }
+
+  next();
+}
+
+app.get("/", (req, res) => {
+  res.render("index", {
+    user: req.session.user,
+  });
 });
 
 app.get("/signup", (req, res) => {
-  res.send(`
-        <h1>Signup</h1>
-
-        <form method="POST" action="/signup">
-            <input name="name" placeholder="Name">
-            <br>
-            <input name="email" placeholder="Email">
-            <br>
-            <input name="password" placeholder="Password">
-            <br>
-            <button>Signup</button>
-        </form>
-    `);
+  res.render("signup");
 });
 
 app.post("/signup", async (req, res) => {
@@ -83,10 +79,9 @@ app.post("/signup", async (req, res) => {
   const validation = schema.validate(req.body);
 
   if (validation.error) {
-    return res.send(`
-            <p>Please fill in all fields.</p>
-            <a href="/signup">Try again</a>
-        `);
+    return res.status(400).render("error", {
+      message: "Please fill in all fields.",
+    });
   }
 
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -95,48 +90,32 @@ app.post("/signup", async (req, res) => {
     name: req.body.name,
     email: req.body.email,
     password: hashedPassword,
+    user_type: "user",
   });
 
   req.session.user = {
     name: req.body.name,
+    user_type: "user",
   };
 
   res.redirect("/members");
 });
 
-app.get('/members', (req, res) => {
-    if (!req.session.user) {
-        return res.redirect('/');
-    }
+app.get("/members", (req, res) => {
+  if (!req.session.user) {
+    return res.redirect("/");
+  }
 
-    const images = [
-        "Luffy_myGoat.jpg",
-        "Luffy_myGoat2.jpg",
-        "Yukti_Cat.jpg"
-    ];
+  const images = ["Luffy_myGoat.jpg", "Luffy_myGoat2.jpg", "Yukti_Cat.jpg"];
 
-    const randomImage = images[Math.floor(Math.random() * images.length)];
-
-    res.send(`
-        <h1>Hello ${req.session.user.name}</h1>
-        <img src="/${randomImage}" width="300">
-        <br>
-        <a href="/logout">Logout</a>
-    `);
+  res.render("members", {
+    user: req.session.user,
+    images: images,
+  });
 });
 
 app.get("/login", (req, res) => {
-  res.send(`
-        <h1>Login</h1>
-
-        <form method="POST" action="/login">
-            <input name="email" placeholder="Email">
-            <br>
-            <input name="password" placeholder="Password">
-            <br>
-            <button>Login</button>
-        </form>
-    `);
+  res.render("login");
 });
 
 app.post("/login", async (req, res) => {
@@ -148,10 +127,9 @@ app.post("/login", async (req, res) => {
   const validation = schema.validate(req.body);
 
   if (validation.error) {
-    return res.send(`
-            <p>Please provide email and password.</p>
-            <a href="/login">Try again</a>
-        `);
+    return res.status(400).render("error", {
+      message: "Please provide email and password.",
+    });
   }
 
   const user = await db.collection("users").findOne({
@@ -159,26 +137,49 @@ app.post("/login", async (req, res) => {
   });
 
   if (!user) {
-    return res.send(`
-            <p>User and password not found.</p>
-            <a href="/login">Try again</a>
-        `);
+    return res.status(400).render("error", {
+      message: "User and password not found.",
+    });
   }
 
   const passwordMatch = await bcrypt.compare(req.body.password, user.password);
 
   if (!passwordMatch) {
-    return res.send(`
-            <p>Invalid password.</p>
-            <a href="/login">Try again</a>
-        `);
+    return res.status(400).render("error", {
+      message: "Invalid password.",
+    });
   }
 
   req.session.user = {
     name: user.name,
+    user_type: user.user_type,
   };
 
   res.redirect("/members");
+});
+
+app.get("/admin", requireLogin, requireAdmin, async (req, res) => {
+  const users = await db.collection("users").find().toArray();
+
+  res.render("admin", {
+    users: users,
+  });
+});
+
+app.get("/promote", requireLogin, requireAdmin, async (req, res) => {
+  await db
+    .collection("users")
+    .updateOne({ email: req.query.email }, { $set: { user_type: "admin" } });
+
+  res.redirect("/admin");
+});
+
+app.get("/demote", requireLogin, requireAdmin, async (req, res) => {
+  await db
+    .collection("users")
+    .updateOne({ email: req.query.email }, { $set: { user_type: "user" } });
+
+  res.redirect("/admin");
 });
 
 app.get("/logout", (req, res) => {
@@ -188,10 +189,7 @@ app.get("/logout", (req, res) => {
 });
 
 app.use((req, res) => {
-    res.status(404).send(`
-        <h1>404 - Page Not Found</h1>
-        <a href="/">Go Home</a>
-    `);
+  res.status(404).render("404");
 });
 
 app.listen(PORT, () => {

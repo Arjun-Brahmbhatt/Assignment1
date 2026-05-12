@@ -1,15 +1,16 @@
 Student Name: Arjun Brahmbhatt
-Student Set: [2C]
+Student Set: 2C
 
-[x] A home page links to signup and login, if not logged in; and links to members and signout, if logged in. 5/5
-[x] A members only page that displays 1 of 3 random images stored on the server. 5/5
-[x] The members only page will redirect to the home page if no valid session is found. 5/5
-[x] The signout buttons end the session. 5/5
-[x] A 404 page that catches all invalid page hits and sets the status code to 404. 5/5
-[x] Session information is stored in a MongoDB session database. Sessions expire after 1 hour. 5/5
-[x] Password is BCrypted in the MongoDB database. 5/5
-[x] The site is hosted on Render. 5/5
-[x] All secrets, encryption keys, and database passwords are stored in a .env file / Render environment variables. 5/5
-[x] The .env file is NOT in the git repo. 5/5
+[x] The /admin page redirects to the /login page if not logged in.
+[x] The /admin page shows an error message if logged in, but not an admin
+[x] The /admin page shows a list of all users
+[x] The /admin page allows for promoting and demoting users to/from admin type
+[x] All pages use a CSS Framework like Bootstrap
 
-Total: 50/50
+[x] The site uses EJS as a templating engine
+[x] Common headers and footers are shared across all pages
+[x] Code used within loop is templated using EJS
+[x] The members page has a responsive grid of 3 images.
+[x] Your site is hosted on Render or other hosting site.
+
+Total grade: 50/50

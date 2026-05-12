@@ -1,0 +1,19 @@
+<%- include("templates/header") %>
+
+<h1>Hello <%= user.name %></h1>
+
+<a class="btn btn-danger mb-4" href="/logout">Logout</a>
+
+<div class="row">
+
+    <% images.forEach(image => { %>
+
+        <div class="col-12 col-md-4 mb-3">
+            <img src="/<%= image %>" class="img-fluid rounded">
+        </div>
+
+    <% }) %>
+
+</div>
+
+<%- include("templates/footer") %>

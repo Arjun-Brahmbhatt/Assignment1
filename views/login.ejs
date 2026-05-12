@@ -1,0 +1,17 @@
+<%- include("templates/header") %>
+
+<h1>Login</h1>
+
+<form method="POST" action="/login" class="w-50">
+  <div class="mb-3">
+    <input class="form-control" name="email" placeholder="Email" />
+  </div>
+
+  <div class="mb-3">
+    <input class="form-control" name="password" placeholder="Password" />
+  </div>
+
+  <button class="btn btn-success">Login</button>
+</form>
+
+<%- include("templates/footer") %>
